@@ -29,7 +29,7 @@ public class KafkaStreamProcessor {
     private KafkaStreamsConfiguration kafkaStreamsConfiguration;
 
     private static final Serde<String> STRING_SERDE = Serdes.String();
-        private static final JsonSerde<Account> ACCOUNT_SERDE = new JsonSerde<>(Account.class);
+    private static final JsonSerde<Account> ACCOUNT_SERDE = new JsonSerde<>(Account.class);
 
     @Bean
     public KafkaStreams kafkaStreams() {

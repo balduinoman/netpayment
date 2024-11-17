@@ -6,8 +6,6 @@
       <list>
         <option value="$PROJECT_DIR$/pom.xml" />
         <option value="$PROJECT_DIR$/../net.payment.account.manager/pom.xml" />
-        <option value="$PROJECT_DIR$/../net.payment.fraud.manager/pom.xml" />
-        <option value="$PROJECT_DIR$/../net.payment.order.manager/pom.xml" />
       </list>
     </option>
   </component>
