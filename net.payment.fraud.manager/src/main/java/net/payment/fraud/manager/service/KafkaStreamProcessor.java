@@ -17,6 +17,8 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 
 @Component
 public class KafkaStreamProcessor {
@@ -54,8 +56,8 @@ public class KafkaStreamProcessor {
              .filter((key, value) -> value != null)
              .branch(fraudPredicate, notFraudPredicate);
 
-        KStream<String, String> validOrderRequestStream =  branches[0].mapValues(value -> "Not Fraud:" + value.getOrderId());
-        KStream<String, String> invalidOrderRequestAccountStream =  branches[1].mapValues(value -> "Fraud" + value.getOrderId());
+        KStream<String, String> validOrderRequestStream =  branches[0].mapValues(value -> "Order (OK)");
+        KStream<String, String> invalidOrderRequestAccountStream =  branches[1].mapValues(value -> "Order (ERROR)");
         KStream<String, String> validatedOrderRequestsStream = invalidOrderRequestAccountStream.merge(validOrderRequestStream);
 
         validatedOrderRequestsStream
@@ -67,8 +69,15 @@ public class KafkaStreamProcessor {
                                 .withValueSerde(STRING_SERDE)
                 );
 
-        branches[1].to("orders-input", Produced.with(STRING_SERDE, CREDIT_CARD_ORDER_SERDE));
-        branches[0].to("frauds-output", Produced.with(STRING_SERDE, CREDIT_CARD_ORDER_SERDE));
+        branches[0]
+                .mapValues((key, value) ->
+                {
+                    value.setPaymentStatus("STARTED");
+                    return value;
+                })
+                .to("orders-input", Produced.with(STRING_SERDE, CREDIT_CARD_ORDER_SERDE));
+
+        branches[1].to("frauds-output", Produced.with(STRING_SERDE, CREDIT_CARD_ORDER_SERDE));
 
         // Build and start the KafkaStreams instance
         KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), kafkaStreamsConfiguration.asProperties());
@@ -90,7 +99,16 @@ public class KafkaStreamProcessor {
     public static class NotFraudPredicate implements Predicate<String, CreditCardOrder> {
         @Override
         public boolean test(String key, CreditCardOrder value) {
-            return value != null && !value.getAccountId().startsWith("5");
+
+            OffsetDateTime dateTime = OffsetDateTime.parse(value.getOrderDate().toInstant().toString());
+            LocalTime orderTime = dateTime.toLocalTime(); // Extract the time part
+
+            // Define the range
+            LocalTime startTime = LocalTime.of(0, 0, 0); // 00:00:00
+            LocalTime endTime = LocalTime.of(4, 0, 0);   // 04:00:00
+
+            // Validate if the time is in range
+            return (orderTime.isAfter(startTime) && orderTime.isBefore(endTime));
         }
     }
 
@@ -98,7 +116,15 @@ public class KafkaStreamProcessor {
     public static class FraudPredicate implements Predicate<String, CreditCardOrder> {
         @Override
         public boolean test(String key, CreditCardOrder value) {
-            return value != null && value.getAccountId().startsWith("5");
+            OffsetDateTime dateTime = OffsetDateTime.parse(value.getOrderDate().toInstant().toString());
+            LocalTime orderTime = dateTime.toLocalTime(); // Extract the time part
+
+            // Define the range
+            LocalTime startTime = LocalTime.of(0, 0, 0); // 00:00:00
+            LocalTime endTime = LocalTime.of(4, 0, 0);   // 04:00:00
+
+            // Validate if the time is in range
+            return !(orderTime.isAfter(startTime) && orderTime.isBefore(endTime));
         }
     }
 }

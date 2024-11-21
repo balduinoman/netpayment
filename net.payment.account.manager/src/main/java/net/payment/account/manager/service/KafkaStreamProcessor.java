@@ -10,6 +10,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.Topology;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.config.KafkaStreamsConfiguration;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class KafkaStreamProcessor {
@@ -47,16 +49,15 @@ public class KafkaStreamProcessor {
                 });
 
         // Define the predicates
-        Predicate<String, Account> visaPredicate = new VisaPredicate();
-        Predicate<String, Account> mastercardPredicate = new MasterCardPredicate();
+        Predicate<String, Account> netCardPredicate = new NetCardPredicate();
+        Predicate<String, Account> othersBrandCardPredicate = new OthersBrandCardPredicate();
 
         // Branch the stream
         KStream<String, Account>[] branches = accountStream
                 .filter((key, value) -> value != null)
-                .branch(visaPredicate, mastercardPredicate);
+                .branch(netCardPredicate, othersBrandCardPredicate);
 
         KTable<String, Account> accountTable =  branches[0]
-                //.filter((key, value) -> value != null)
                 .selectKey((key, value) -> value.getAccountId())
                 .groupByKey(Grouped.with(STRING_SERDE, ACCOUNT_SERDE))
                 .reduce(
@@ -66,9 +67,9 @@ public class KafkaStreamProcessor {
                                 .withValueSerde(ACCOUNT_SERDE)
                 );
 
-        accountTable.toStream().to("accounts-integration-output", Produced.with(STRING_SERDE, ACCOUNT_SERDE));
+        accountTable.toStream().to("accounts-output", Produced.with(STRING_SERDE, ACCOUNT_SERDE));
 
-        KStream<String, String> validRequestAccountStream =  branches[0].mapValues(value -> "Account id:" + value.getAccountId());
+        KStream<String, String> validRequestAccountStream =  branches[0].mapValues(value -> "Account id: " + value.getAccountId());
         KStream<String, String> invalidRequestAccountStream =  branches[1].mapValues(value -> "Invalid Request");
         KStream<String, String> validatedRequestsAccountStream = invalidRequestAccountStream.merge(validRequestAccountStream);
 
@@ -93,9 +94,13 @@ public class KafkaStreamProcessor {
 
         dlqStream.to("accounts-dlq");
 
+        Topology topology = streamsBuilder.build();
+
         // Build and start the KafkaStreams instance
-        KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), kafkaStreamsConfiguration.asProperties());
+        KafkaStreams kafkaStreams = new KafkaStreams(topology, kafkaStreamsConfiguration.asProperties());
         kafkaStreams.start();
+
+        System.out.println(topology.describe());
 
         return kafkaStreams;
     }
@@ -104,6 +109,7 @@ public class KafkaStreamProcessor {
     {
         try {
             Account account = objectMapper.readValue(json, Account.class);
+            account.setAccountId(UUID.randomUUID().toString());
             account.setAccountLastUpdate(LocalDateTime.now());
             return account;
         } catch (JsonProcessingException e) {
@@ -112,18 +118,18 @@ public class KafkaStreamProcessor {
     }
 
     // Define the predicate for Visa
-    public static class VisaPredicate implements Predicate<String, Account> {
+    public static class NetCardPredicate implements Predicate<String, Account> {
         @Override
         public boolean test(String key, Account value) {
-            return value != null && "Visa".equalsIgnoreCase(value.getBrandName());
+            return value != null && "NetCard".equalsIgnoreCase(value.getBrandName());
         }
     }
 
     // Define the predicate for MasterCard
-    public static class MasterCardPredicate implements Predicate<String, Account> {
+    public static class OthersBrandCardPredicate implements Predicate<String, Account> {
         @Override
         public boolean test(String key, Account value) {
-            return value != null && "MasterCard".equalsIgnoreCase(value.getBrandName());
+            return value != null && !"NetCard".equalsIgnoreCase(value.getBrandName());
         }
     }
 }

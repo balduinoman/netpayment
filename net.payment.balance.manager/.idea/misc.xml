@@ -8,7 +8,13 @@
         <option value="$PROJECT_DIR$/../net.payment.account.manager/pom.xml" />
         <option value="$PROJECT_DIR$/../net.payment.fraud.manager/pom.xml" />
         <option value="$PROJECT_DIR$/../net.payment.order.manager/pom.xml" />
+        <option value="$PROJECT_DIR$/../net.payment.account.api/pom.xml" />
       </list>
+    </option>
+    <option name="ignoredFiles">
+      <set>
+        <option value="$PROJECT_DIR$/../net.payment.account.api/pom.xml" />
+      </set>
     </option>
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_21" default="true" project-jdk-name="21" project-jdk-type="JavaSDK">

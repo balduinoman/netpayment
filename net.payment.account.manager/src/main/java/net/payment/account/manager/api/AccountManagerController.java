@@ -25,7 +25,7 @@ public class AccountManagerController {
     public Account getAccountById(@RequestParam String accountId) {
 
         ReadOnlyKeyValueStore<String, Account> store = kafkaStreams.store(
-                StoreQueryParameters.fromNameAndType("state-store", QueryableStoreTypes.keyValueStore())
+                StoreQueryParameters.fromNameAndType("accounts-state-store", QueryableStoreTypes.keyValueStore())
         );
 
         return store.get(accountId);

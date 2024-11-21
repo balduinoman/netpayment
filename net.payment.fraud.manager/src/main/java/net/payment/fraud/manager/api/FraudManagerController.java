@@ -34,11 +34,11 @@ public class FraudManagerController {
     @PostMapping("/api/fraud-manager/create-order-request")
     public String createRequest(@RequestBody CreditCardOrder creditCardOrder) throws JsonProcessingException {
 
-        String key = UUID.randomUUID().toString();
+        String orderId = UUID.randomUUID().toString();
 
         // Send the AccountMessage object to Kafka
-        kafkaProducerService.sendMessage(key, creditCardOrder);
+        kafkaProducerService.sendMessage(orderId, creditCardOrder);
 
-        return key;
+        return "Order Id: " + orderId;
     }
 }
