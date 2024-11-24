@@ -67,8 +67,6 @@ public class KafkaStreamProcessor {
                                 .withValueSerde(ACCOUNT_SERDE)
                 );
 
-        accountTable.toStream().to("accounts-output", Produced.with(STRING_SERDE, ACCOUNT_SERDE));
-
         KStream<String, String> validRequestAccountStream =  branches[0].mapValues(value -> "Account id: " + value.getAccountId());
         KStream<String, String> invalidRequestAccountStream =  branches[1].mapValues(value -> "Invalid Request");
         KStream<String, String> validatedRequestsAccountStream = invalidRequestAccountStream.merge(validRequestAccountStream);

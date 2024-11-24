@@ -109,7 +109,7 @@ public class KafkaStreamProcessor {
                             }
                             else
                             {
-                                if (currentBalance.getBalance().compareTo(creditCardOrder.getOrderAmount()) > 0) {
+                                if (currentBalance.getBalance().compareTo(creditCardOrder.getOrderAmount()) >= 0) {
                                     creditCardAccountBalance.setBalance(currentBalance.getBalance().subtract(creditCardOrder.getOrderAmount()));
                                     creditCardAccountBalance.setPaymentStatus("EXECUTED");
                                 } else {
