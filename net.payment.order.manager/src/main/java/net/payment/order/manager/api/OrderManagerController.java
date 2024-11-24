@@ -22,23 +22,24 @@ public class OrderManagerController {
     private KafkaProducerService kafkaProducerService;
 
     @GetMapping("/api/order-manager/get-order-by-id")
-    public String getAccountById(@RequestParam String orderRequestId) {
+    public CreditCardOrder getOrderById(@RequestParam String orderRequestId) {
 
-        ReadOnlyKeyValueStore<String, String> store = kafkaStreams.store(
-                StoreQueryParameters.fromNameAndType("frauds-state-store", QueryableStoreTypes.keyValueStore())
+        ReadOnlyKeyValueStore<String, CreditCardOrder> store = kafkaStreams.store(
+                StoreQueryParameters.fromNameAndType("orders-state-store", QueryableStoreTypes.keyValueStore())
         );
 
         return store.get(orderRequestId);
     }
 
     @PostMapping("/api/order-manager/create-order-request")
-    public String createRequest(@RequestBody CreditCardOrder creditCardOrder) throws JsonProcessingException {
+    public CreditCardOrder createRequest(@RequestBody CreditCardOrder creditCardOrder) throws JsonProcessingException {
 
-        String key = UUID.randomUUID().toString();
+        String orderId = UUID.randomUUID().toString();
+        creditCardOrder.setOrderId(orderId);
+        creditCardOrder.setPaymentStatus("CREATED");
+        // Send the CreditCardOrder object to Kafka
+        kafkaProducerService.sendMessage(orderId, creditCardOrder);
 
-        // Send the AccountMessage object to Kafka
-        kafkaProducerService.sendMessage(key, creditCardOrder);
-
-        return key;
+        return creditCardOrder;
     }
 }

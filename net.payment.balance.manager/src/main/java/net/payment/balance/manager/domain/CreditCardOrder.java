@@ -11,6 +11,7 @@ public class CreditCardOrder {
     private BigDecimal orderAmount;  // The total amount of the order
     private String paymentStatus;    // Status of the payment (e.g., "Pending", "Completed", "Failed")
     private Date orderDate;          // Date and time when the order was placed
+    private BigDecimal creditLimit; // Credit limit
 
     // Getters and setters
     public String getOrderId() {
@@ -59,5 +60,13 @@ public class CreditCardOrder {
 
     public void setOrderDate(Date orderDate) {
         this.orderDate = orderDate;
+    }
+
+    public BigDecimal getCreditLimit() {
+        return creditLimit;
+    }
+
+    public void setCreditLimit(BigDecimal creditLimit) {
+        this.creditLimit = creditLimit;
     }
 }

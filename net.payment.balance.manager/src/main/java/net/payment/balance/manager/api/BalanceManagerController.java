@@ -32,13 +32,12 @@ public class BalanceManagerController {
     }
 
     @PostMapping("/api/balance-manager/create-balance-request")
-    public String createRequest(@RequestBody CreditCardAccountBalance creditCardAccountBalance) throws JsonProcessingException {
+    public CreditCardAccountBalance createRequest(@RequestBody CreditCardAccountBalance creditCardAccountBalance) throws JsonProcessingException {
 
         String key = UUID.randomUUID().toString();
-
         // Send the AccountMessage object to Kafka
         kafkaProducerService.sendMessage(key, creditCardAccountBalance);
 
-        return key;
+        return creditCardAccountBalance;
     }
 }

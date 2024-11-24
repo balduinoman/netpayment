@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import net.payment.order.manager.domain.CreditCardOrder;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.config.KafkaStreamsConfiguration;
@@ -15,7 +17,6 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Component
 public class KafkaStreamProcessor {
@@ -44,7 +45,67 @@ public class KafkaStreamProcessor {
             }
         });
 
-        creditCardOrdersInputStream.to("orders-output", Produced.with(STRING_SERDE, CREDIT_CARD_ORDER_SERDE));
+        KStream<String, CreditCardOrder> ordersInProgress = creditCardOrdersInputStream
+                .filter(
+                        (key, value) ->
+                                (value != null && value.getPaymentStatus() != null && value.getPaymentStatus().equals("NOT_FRAUD"))
+                )
+                .mapValues((value) ->
+                {
+                    value.setPaymentStatus("PROGRESS");
+                    return value;
+                } );
+
+        KStream<String, CreditCardOrder> ordersFinished = creditCardOrdersInputStream
+                .filter(
+                        (key, value) ->
+                                (value != null
+                                        && value.getPaymentStatus() != null
+                                        && (value.getPaymentStatus().equals("EXECUTED") || value.getPaymentStatus().equals("NOT_EXECUTED")))
+                )
+                .mapValues((key, value) ->
+                {
+                    value.setPaymentStatus("COMPLETED-" + value.getPaymentStatus());
+                    return value;
+                });
+
+        creditCardOrdersInputStream
+                .groupByKey()
+                .aggregate(
+                        CreditCardOrder::new, // Initial balance
+                        (orderId, newCreditCardOrder, currentCreditCardOrder) ->
+                        {
+                            if (currentCreditCardOrder == null) {
+                                currentCreditCardOrder = new CreditCardOrder();
+                            }
+
+                            currentCreditCardOrder.setOrderId(orderId);
+
+                            if(currentCreditCardOrder.getAccountId() == null)
+                                currentCreditCardOrder.setAccountId(newCreditCardOrder.getAccountId());
+
+                            if(currentCreditCardOrder.getCreditCardNumber() == null)
+                                currentCreditCardOrder.setCreditCardNumber(newCreditCardOrder.getCreditCardNumber());
+
+                            if(currentCreditCardOrder.getOrderAmount() == null)
+                                currentCreditCardOrder.setOrderAmount(newCreditCardOrder.getOrderAmount());
+
+                            if(currentCreditCardOrder.getOrderDate() == null)
+                                currentCreditCardOrder.setOrderDate(newCreditCardOrder.getOrderDate());
+
+                            if(currentCreditCardOrder.getOrderDate() == null)
+                                currentCreditCardOrder.setCreditLimit(newCreditCardOrder.getCreditLimit());
+
+                            currentCreditCardOrder.setPaymentStatus(newCreditCardOrder.getPaymentStatus());
+
+                            return currentCreditCardOrder;
+                        },
+                        Materialized.<String, CreditCardOrder, KeyValueStore<Bytes, byte[]>>as("orders-state-store")
+                                .withKeySerde(STRING_SERDE)
+                                .withValueSerde(CREDIT_CARD_ORDER_SERDE)
+                );
+
+        ordersInProgress.to("orders-output", Produced.with(STRING_SERDE, CREDIT_CARD_ORDER_SERDE));
 
         // Build and start the KafkaStreams instance
         KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), kafkaStreamsConfiguration.asProperties());
@@ -56,11 +117,7 @@ public class KafkaStreamProcessor {
     private CreditCardOrder convertJsonToCreditCardOrder(String json)
     {
         try {
-            CreditCardOrder creditCardOrder = objectMapper.readValue(json, CreditCardOrder.class);
-            creditCardOrder.setOrderId(UUID.randomUUID().toString());
-            creditCardOrder.setPaymentStatus("IN-PROGRESS");
-
-            return  creditCardOrder;
+            return objectMapper.readValue(json, CreditCardOrder.class);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }

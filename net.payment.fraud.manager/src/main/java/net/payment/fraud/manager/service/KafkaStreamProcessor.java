@@ -37,7 +37,7 @@ public class KafkaStreamProcessor {
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
-        KStream<String, String> fraudsInputStream = streamsBuilder.stream("frauds-input", Consumed.with(STRING_SERDE, STRING_SERDE));
+        KStream<String, String> fraudsInputStream = streamsBuilder.stream("orders-input", Consumed.with(STRING_SERDE, STRING_SERDE));
 
         KStream<String, CreditCardOrder> validatedBalancesIntegrationInputStream = fraudsInputStream.mapValues(value -> {
             try {
@@ -56,8 +56,8 @@ public class KafkaStreamProcessor {
              .filter((key, value) -> value != null)
              .branch(fraudPredicate, notFraudPredicate);
 
-        KStream<String, String> validOrderRequestStream =  branches[0].mapValues(value -> "Order (OK)");
-        KStream<String, String> invalidOrderRequestAccountStream =  branches[1].mapValues(value -> "Order (ERROR)");
+        KStream<String, String> validOrderRequestStream =  branches[0].mapValues(value -> "NOT_FRAUD");
+        KStream<String, String> invalidOrderRequestAccountStream =  branches[1].mapValues(value -> "FRAUD");
         KStream<String, String> validatedOrderRequestsStream = invalidOrderRequestAccountStream.merge(validOrderRequestStream);
 
         validatedOrderRequestsStream
@@ -72,7 +72,7 @@ public class KafkaStreamProcessor {
         branches[0]
                 .mapValues((key, value) ->
                 {
-                    value.setPaymentStatus("STARTED");
+                    value.setPaymentStatus("NOT_FRAUD");
                     return value;
                 })
                 .to("orders-input", Produced.with(STRING_SERDE, CREDIT_CARD_ORDER_SERDE));
@@ -89,7 +89,11 @@ public class KafkaStreamProcessor {
     private CreditCardOrder convertJsonToCreditCardOrder(String json)
     {
         try {
-            return objectMapper.readValue(json, CreditCardOrder.class);
+            CreditCardOrder creditCardOrder = objectMapper.readValue(json, CreditCardOrder.class);
+            if(creditCardOrder.getPaymentStatus().equals("CREATED"))
+                return creditCardOrder;
+            else
+                return null;
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }

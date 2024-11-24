@@ -8,6 +8,9 @@ public class CreditCardAccountBalance {
     private Long creditCardNumber; // Credit card number
     private BigDecimal balance;    // Current balance
     private BigDecimal creditLimit; // Credit limit
+    private String orderId;          // Unique identifier for the order
+
+    private String paymentStatus;    // Status of the payment (e.g., "Pending", "Completed", "Failed")
 
     // Getters and Setters
     public String getAccountId() {
@@ -40,6 +43,22 @@ public class CreditCardAccountBalance {
 
     public void setCreditLimit(BigDecimal creditLimit) {
         this.creditLimit = creditLimit;
+    }
+
+    public String getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
     }
 
     // Simple toString for printing
