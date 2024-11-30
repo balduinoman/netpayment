@@ -18,7 +18,7 @@ A aplicação é dividida em quatro módulos principais:
 
 ## 🖼️ Arquitetura  
 
-![kafka_streams_betting_solution](https://github.com/user-attachments/assets/ea421cb4-c658-4e8c-825e-4cc0b7b9c431)
+![image](https://github.com/user-attachments/assets/21918078-4690-456d-9bd3-06e0cf52f901)
 
 
 Toda a arquitetura da solução está ilustrada na imagem disponível neste repositório, detalhando:  
