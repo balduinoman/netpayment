@@ -18,7 +18,7 @@ A aplicação é dividida em quatro módulos principais:
 
 ## 🖼️ Arquitetura  
 
-![kafka_streams_net-payment-solution](https://github.com/user-attachments/assets/c9b4898c-3c95-4464-8001-7c35244b8f13)
+![image](https://github.com/user-attachments/assets/21918078-4690-456d-9bd3-06e0cf52f901)
 
 
 Toda a arquitetura da solução está ilustrada na imagem disponível neste repositório, detalhando:  
