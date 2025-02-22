@@ -8,23 +8,30 @@ import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
 public class AccountManagerController {
 
-    @Autowired
-    private KafkaStreams kafkaStreams;
+    private final StreamsBuilderFactoryBean factoryBean;
 
     @Autowired
     private KafkaProducerService kafkaProducerService;
 
+    public AccountManagerController(StreamsBuilderFactoryBean factoryBean) {
+        this.factoryBean = factoryBean;
+    }
+
     @GetMapping("/api/account-manager/get-account-by-id")
     public Account getAccountById(@RequestParam String accountId) {
 
-        ReadOnlyKeyValueStore<String, Account> store = kafkaStreams.store(
+        KafkaStreams kafkaStreams = factoryBean.getKafkaStreams();
+
+        ReadOnlyKeyValueStore<String, Account> store = Objects.requireNonNull(kafkaStreams).store(
                 StoreQueryParameters.fromNameAndType("accounts-state-store", QueryableStoreTypes.keyValueStore())
         );
 
@@ -45,7 +52,9 @@ public class AccountManagerController {
     @GetMapping("/api/account-manager/get-request-by-id")
     public String getRequestById(@RequestParam String requestId) throws JsonProcessingException {
 
-        ReadOnlyKeyValueStore<String, String> store = kafkaStreams.store(
+        KafkaStreams kafkaStreams = factoryBean.getKafkaStreams();
+
+        ReadOnlyKeyValueStore<String, String> store = Objects.requireNonNull(kafkaStreams).store(
                 StoreQueryParameters.fromNameAndType("requests-state-store", QueryableStoreTypes.keyValueStore())
         );
 

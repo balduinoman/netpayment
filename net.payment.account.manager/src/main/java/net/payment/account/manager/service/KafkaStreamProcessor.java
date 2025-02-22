@@ -6,19 +6,16 @@ import net.payment.account.manager.domain.Account;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
-import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.Topology;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-import org.springframework.kafka.config.KafkaStreamsConfiguration;
 import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -27,17 +24,12 @@ public class KafkaStreamProcessor {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Autowired
-    private KafkaStreamsConfiguration kafkaStreamsConfiguration;
-
     private static final Serde<String> STRING_SERDE = Serdes.String();
     private static final JsonSerde<Account> ACCOUNT_SERDE = new JsonSerde<>(Account.class);
 
     @Bean
-    public KafkaStreams kafkaStreams() {
-
-        StreamsBuilder streamsBuilder = new StreamsBuilder();
-
+    public KStream kafkaStreams(StreamsBuilder streamsBuilder)
+    {
         KStream<String, String> stream = streamsBuilder.stream("accounts-input", Consumed.with(STRING_SERDE, STRING_SERDE));
 
         KStream<String, Account> accountStream = stream.mapValues(value -> {
@@ -93,14 +85,9 @@ public class KafkaStreamProcessor {
         dlqStream.to("accounts-dlq");
 
         Topology topology = streamsBuilder.build();
-
-        // Build and start the KafkaStreams instance
-        KafkaStreams kafkaStreams = new KafkaStreams(topology, kafkaStreamsConfiguration.asProperties());
-        kafkaStreams.start();
-
         System.out.println(topology.describe());
 
-        return kafkaStreams;
+        return stream;
     }
 
     private Account convertJsonToAccount(String json)
